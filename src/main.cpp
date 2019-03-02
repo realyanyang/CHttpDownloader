@@ -9,16 +9,10 @@
 int main()
 {
 
-	HttpDownloader downloader("http://dl.cnponer.com/PanDownload_v2.0.6.zip","D:\\Download\\testDownloader.zip");
-	if (downloader.supportResumeDownload())
-	{
-		cout << "**支持断点续传" << endl;
-		downloader.startDownloader();
-	}
-	else
-	{
-		cout << "**不支持断点续传" << endl;
-		downloader.startDownloader();
-	}
-	return 0;
+	HttpDownloader downloader("http://selenium-release.storage.googleapis.com/2.39/selenium-server-2.39.0.zip","D:\\Download\\testDownloader.zip");
+	//char *name = NULL;
+	//downloader.getFileName(name);
+	downloader.startDownloader();
+	////cout << name << endl;
+	//return 0;
 }
