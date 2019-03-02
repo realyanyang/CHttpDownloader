@@ -6,28 +6,34 @@
 #pragma once
 #include <iostream>
 #include <curl/curl.h>
+
 using namespace std;
 
 class HttpDownloader {
 public:
-	HttpDownloader(const char url[], const char file[]);           //¹¹Ôìº¯Êı
-	bool supportResumeDownload();     //¼ì²â·şÎñÆ÷ÊÇ·ñÖ§³Ö¶ÏµãĞø´«
-	void startDownloader();       //¿ªÊ¼ÏÂÔØ£¬×÷ÎªÏß³Ìº¯Êı
-	void cleanTempFile();            //ÇåÀíÁÙÊ±ÎÄ¼ş
-	void mergeTempFile();           //ºÏ²¢ÁÙÊ±ÎÄ¼ş
+	HttpDownloader(const char url[], const char file[]);           //æ„é€ å‡½æ•°
+	void startDownloader();       //å¼€å§‹ä¸‹è½½ï¼Œä½œä¸ºçº¿ç¨‹å‡½æ•°
+
+	void cleanTempFile();            //æ¸…ç†ä¸´æ—¶æ–‡ä»¶
+	void mergeTempFile();           //åˆå¹¶ä¸´æ—¶æ–‡ä»¶
+	void getFileName(char* fileName);          //è·å–æ‰€ä¸‹è½½æ–‡ä»¶çš„åç§°
+	/*æœªå®ç°è·å–æ–‡ä»¶å*/
 	~HttpDownloader();
-	//void threadMonitor();            //Ö÷Ïß³Ì¼àÊÓÆ÷
+	//void threadMonitor();            //ä¸»çº¿ç¨‹ç›‘è§†å™¨
 private:
-	bool resumable;              //ÊÇ·ñ¿ÉÒÔ·Ö¿ª´«Êä
-	CURL *curl;                      //¶¨ÒåCURLÀàĞÍµÄÖ¸Õë
-	CURLcode res;                     //·µ»ØµÄĞÅÏ¢
-	CURLcode info;                   //ÏìÓ¦Í·ĞÅÏ¢
-	int fileSize;                    //ÎÄ¼ş´óĞ¡
-	int threadNum = 8;           //Ïß³Ì¸öÊı
-	int timeOut = 5000;         //time out 5000 ºÁÃë
-	const char* urlAddress;         //·ÃÎÊµÄURLµØÖ·s
-	const char* fileAdress;              //±£´æÎÄ¼şÎ»ÖÃ
-	long int minSize;             //·ÖÏß³ÌµÄ×îĞ¡´óĞ¡
-	//FILE *fp;            //ÎÄ¼şÖ¸Õë
+	bool resumable;              //æ˜¯å¦å¯ä»¥åˆ†å¼€ä¼ è¾“
+	bool connectAble;           //æœåŠ¡å™¨æ˜¯å¦å¯ä»¥è¿æ¥
+	CURL *curl;                      //å®šä¹‰CURLç±»å‹çš„æŒ‡é’ˆ
+	//CURLcode res;                     //è¿”å›çš„ä¿¡æ¯
+	CURLcode info;                   //å“åº”å¤´ä¿¡æ¯
+	int threadNum = 8;           //çº¿ç¨‹ä¸ªæ•°
+	int timeOut = 5000;         //time out 5000 æ¯«ç§’
+	const char* urlAddress;         //è®¿é—®çš„URLåœ°å€s
+	const char* fileAdress;              //ä¿å­˜æ–‡ä»¶ä½ç½®
+	long int minSize;             //åˆ†çº¿ç¨‹çš„æœ€å°å¤§å°
+	double fileSize;      //ä¸‹è½½æ–‡ä»¶çš„å¤§å°
+	double localFileSize;     //å·²ä¸‹è½½åˆ°æœ¬åœ°çš„æ–‡ä»¶å¤§å°
+	int startPoints[2];            //æ–­ç‚¹èµ·å§‹ä½ç½®
+	//FILE *fp;            //æ–‡ä»¶æŒ‡é’ˆ
 
 };
