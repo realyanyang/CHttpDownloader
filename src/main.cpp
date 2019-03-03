@@ -9,10 +9,9 @@
 int main()
 {
 
-	HttpDownloader downloader("http://selenium-release.storage.googleapis.com/2.39/selenium-server-2.39.0.zip","D:\\Download\\testDownloader.zip");
-	//char *name = NULL;
-	//downloader.getFileName(name);
-	downloader.startDownloader();
-	////cout << name << endl;
-	//return 0;
+	HttpDownloader downloader("https://files.pythonhosted.org/packages/36/fa/51ca4d57392e2f69397cd6e5af23da2a8d37884a605f9e3f2d3bfdc48397/pip-19.0.3.tar.gz","D:\\Download\\testDownloader.gz");
+	//downloader.startDownloader();
+	downloader.singleDown();
+	//downloader.newDownladThread(0, 276, 0);
+	return 0;
 }
