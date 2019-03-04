@@ -12,6 +12,10 @@
 #include <time.h>
 #include <iomanip>
 #include <regex>
+#include <mutex>
+
+bool downloadSuccess[threadNum] = { 0 };
+mutex mut;               //线程锁
 
 HttpDownloader::HttpDownloader(const char url[], const char file[])
 {
@@ -184,17 +188,29 @@ void HttpDownloader::singleDown()
 
 }
 
-void HttpDownloader::multiDown()
+start_end* HttpDownloader::getStartEnd()
 {
-	double startPoints[threadNum];           //多线程下载起始位置
-	double endPoints[threadNum];             //多线程下载终止位置
-	unsigned int eachFileSize = (int)fileSize / threadNum;
+	start_end st_en[threadNum];
+	//double startPoints[threadNum];           //多线程下载起始位置
+	//double endPoints[threadNum];             //多线程下载终止位置
+	int eachFileSize = fileSize / threadNum;
+	//cout << "eachfilezie:::::::::::" << eachFileSize << endl;
 	for (int i = 0; i < threadNum; i++)
-		startPoints[i] = i * eachFileSize;
+		st_en[i].startPoint = i * eachFileSize;
 	for (int j = 0; j < threadNum - 1; j++)
-		endPoints[j] = startPoints[j + 1] - 1;
-	endPoints[threadNum - 1] = fileSize - 1;
+		st_en[j].endPonint = st_en[j + 1].startPoint - 1;
+	st_en[threadNum - 1].endPonint = fileSize - 1;
+	/*for (int k = 0; k < 8; k++)
+	{
+		cout << st_en[k].startPoint << endl;
+	}*/
+	return st_en;
 	/*创建新的下载线程*/
+	/*HttpDownloader *p = this;
+	for (int k = 0; k < threadNum; k++)
+	{
+		thread anThread(&HttpDownloader::newDownladThread, p, startPoints[k], endPoints[k], k);
+	}*/
 
 
 
@@ -243,7 +259,7 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, int num)
 		CURLcode res;
 		FILE *sub_fp = fopen(tmpfile.c_str(), "wb");
 		string requrRange = "Range: bytes=" + to_string(startpoint) + "-" + to_string(endpoint);
-		cout << requrRange << endl;
+		cout << "requrRange:  " << requrRange << endl;
 		headers = curl_slist_append(headers, requrRange.c_str());
 		curl_easy_setopt(sub_curl, CURLOPT_HTTPHEADER, headers);
 		curl_easy_setopt(sub_curl, CURLOPT_URL, urlAddress);
@@ -252,10 +268,18 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, int num)
 		curl_easy_setopt(sub_curl, CURLOPT_WRITEFUNCTION, write_data);
 		curl_easy_setopt(sub_curl, CURLOPT_WRITEDATA, sub_fp);
 
+		mut.lock();
 		res = curl_easy_perform(sub_curl);
+		mut.unlock();
+
 		if (res)
 		{
-			cout << "**线程写文件失败" << endl;
+			cout << "**线程写文件失败" << num << endl;
+		}
+		else
+		{
+			downloadSuccess[num] = true;
+			cout << "**线程写文件成功" << num << endl;
 		}
 		curl_easy_cleanup(sub_curl);
 		fclose(sub_fp);
@@ -263,10 +287,26 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, int num)
 }
 
 
+bool HttpDownloader::threadMonitor()
+{
+	int i;
+	for (i = 0; i < threadNum; i++)
+	{
+		if (downloadSuccess[i])
+			continue;
+		else
+			break;
+	}
+	if (i == threadNum)            //返回true即为所有线程下载完成
+		return true;
+	else                  // 返回false即为还有线程正在下载
+		return false;
+}
+
 void HttpDownloader::startDownloader()
 {
 	if (!resumable)
 		singleDown();
-	else
-		multiDown();
+	else;
+		//multiDown();
 }
