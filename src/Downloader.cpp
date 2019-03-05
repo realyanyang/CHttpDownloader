@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 #include <vector>
 #include <time.h>
 #include <iomanip>
@@ -16,10 +15,11 @@
 
 bool downloadSuccess[threadNum] = { 0 };
 mutex mut;               //线程锁
+string tmpfileToMerge[threadNum];
 
 HttpDownloader::HttpDownloader(const char url[], const char file[])
 {
-	curl_global_init(CURL_GLOBAL_ALL);
+	//curl_global_init(CURL_GLOBAL_ALL);
 	urlAddress = url;
 	fileAdress = file;
 	curl = curl_easy_init();
@@ -40,13 +40,12 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeOut);
 			//调用curl_easy_perform 执行.并进行相关的操作.
 			res = curl_easy_perform(curl);
-			cout << "this res is ::" << res << endl;
+			//cout << "this res is ::" << res << endl;
 			if (res == CURLE_OK)
 				break;
 			else
 				continue;
 		}
-		cout << "i:::" << i << endl;
 		if (i == 3)
 		{
 			cout << "**无法连接到服务器" << endl;
@@ -57,11 +56,11 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 		long response_code;
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 		curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &fileSize);
-		cout << "size::::" << fileSize << endl;
+		//cout << "size::::" << fileSize << endl;
 		//cout << response_code << endl;
 		//清除curl操作.
 		curl_easy_cleanup(curl);
-		if (response_code == 206)
+		if (response_code == 206 || fileSize != NULL || fileSize != 0)
 		{
 			resumable = true;
 			cout << "**支持断点续传" << endl;
@@ -81,7 +80,7 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 }
 HttpDownloader::~HttpDownloader()
 {
-	curl_global_cleanup();
+	//curl_global_cleanup();
 }
 
 
@@ -114,14 +113,23 @@ int progressCallback(void *clientp, double dltotal, double dlnow, double ultotal
 {
 	long double speed;
 	double dByte;
-	clock_t nowTime = clock();
-	long double dTime = (long double)(nowTime - preTime) / CLOCKS_PER_SEC; //单位为秒s
-	if (dTime >= 1)               //最少每1s显示一次速度
+	//string precent;
+	//clock_t nowTime = clock();
+	//long double dTime = (long double)(nowTime - preTime) / CLOCKS_PER_SEC; //单位为秒s
+
+	if (dlnow != preFileSize)
 	{
+
+		clock_t nowTime = clock();
+		long double dTime = (long double)(nowTime - preTime) / CLOCKS_PER_SEC; //单位为秒s
 		dByte = dlnow - preFileSize;
 		speed = dByte / dTime;
 		if (speed >= 1024 && speed < 1024 * 1024)
-			cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed / 1024 << "KB/s" << "    " << (dlnow / dltotal) * 100 << " %"<< endl;
+		{
+			
+
+		}
+			//cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed / 1024 << "KB/s" << "    " << (dlnow / dltotal) * 100 << " %"<< endl;
 		else if (speed >= 1024 * 1024 && speed < 1024 * 1024 * 1024)
 			cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed / (1024 * 1024) << "MB/s" << "    " << (dlnow / dltotal) * 100 << " %" << endl;
 		else if (speed >= 1024 * 1024 * 1024)
@@ -129,8 +137,25 @@ int progressCallback(void *clientp, double dltotal, double dlnow, double ultotal
 		else
 			cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed << "B/s" << "    " << (dlnow / dltotal) * 100 << " %"<< endl;
 		preTime = nowTime;
-		preFileSize = dlnow;
+				preFileSize = dlnow;
+
 	}
+
+	//if (dTime >= 1)               //最少每1s显示一次速度
+	//{
+	//	dByte = dlnow - preFileSize;
+	//	speed = dByte / dTime;
+	//	if (speed >= 1024 && speed < 1024 * 1024)
+	//		cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed / 1024 << "KB/s" << "    " << (dlnow / dltotal) * 100 << " %"<< endl;
+	//	else if (speed >= 1024 * 1024 && speed < 1024 * 1024 * 1024)
+	//		cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed / (1024 * 1024) << "MB/s" << "    " << (dlnow / dltotal) * 100 << " %" << endl;
+	//	else if (speed >= 1024 * 1024 * 1024)
+	//		cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed / (1024 * 1024 * 1024) << "GB/s" << "    " << (dlnow / dltotal) * 100 << " %" << endl;
+	//	else
+	//		cout << "speed: " << setiosflags(ios::fixed) << setprecision(2) << speed << "B/s" << "    " << (dlnow / dltotal) * 100 << " %"<< endl;
+	//	preTime = nowTime;
+	//	preFileSize = dlnow;
+	//}
 
 
 	//if (dlnow == preFileSize)
@@ -177,10 +202,10 @@ void HttpDownloader::singleDown()
 	{
 		long double downloadSzie;
 		double speed;
-		cout << "here" << endl;
+		//cout << "here" << endl;
 		curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD, &downloadSzie);
 		curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD, &speed);
-		cout << "size:" << downloadSzie << endl;
+		cout << "downloaded size:" << downloadSzie << endl;
 		cout << "average speed: " << speed << "bytes/sec" << " 100.00%" << endl;
 	}
 	curl_easy_cleanup(curl);
@@ -193,7 +218,7 @@ start_end* HttpDownloader::getStartEnd()
 	start_end st_en[threadNum];
 	//double startPoints[threadNum];           //多线程下载起始位置
 	//double endPoints[threadNum];             //多线程下载终止位置
-	int eachFileSize = fileSize / threadNum;
+	long eachFileSize = fileSize / threadNum;
 	//cout << "eachfilezie:::::::::::" << eachFileSize << endl;
 	for (int i = 0; i < threadNum; i++)
 		st_en[i].startPoint = i * eachFileSize;
@@ -216,17 +241,8 @@ start_end* HttpDownloader::getStartEnd()
 
 }
 
-
-void HttpDownloader::newDownladThread(long startpoint, long endpoint, int num)
+string HttpDownloader::creatTmpFile(long startpoint, long endpoint, int num)
 {
-	/*创建临时文件*/
-	//regex reg("\\\\\w+\.");
-	//string str = fileAdress;
-	//smatch result;
-	//if (regex_match(str, result, reg))
-	//	cout << result[0] << endl;
-	//else
-	//	cout << "no" << endl;
 	/*创建临时文件*/
 	string tmpFileName;                 //生成临时文件的文件名
 	string tmpFilePath;                   //生成临时文件的路径
@@ -241,25 +257,68 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, int num)
 		string tmp = fileAdress;
 		tmpFileName = &tmp[k + 1];
 		tmpFilePath = tmp.substr(0, k + 1);
-		cout << tmpFilePath << endl;
+		//cout << tmpFilePath << endl;
 		int i = tmpFileName.length();
 		while (i > 0 && tmpFileName[i] != '.')
 			i--;
 		tmpFileName = tmpFileName.substr(0, i);
 		tmpFileName = tmpFileName + "." + to_string(num) + "tmp";
 	}
-	cout << tmpFileName << endl;
-	string tmpfile = tmpFilePath + tmpFileName;
-	cout << tmpfile << endl;
+	//cout << tmpFileName << endl;
+	string tmpfile = tmpFilePath + tmpFileName;     //临时文件路径
+	tmpfileToMerge[num] = tmpfile;
+	//cout << tmpfile << endl;
+	return tmpfile;
+}
+
+
+void HttpDownloader::newDownladThread(long startpoint, long endpoint, string tmpfile, int num)
+{
+	/*创建临时文件*/
+	//regex reg("\\\\\w+\.");
+	//string str = fileAdress;
+	//smatch result;
+	//if (regex_match(str, result, reg))
+	//	cout << result[0] << endl;
+	//else
+	//	cout << "no" << endl;
+	/*创建临时文件*/
+	//string tmpFileName;                 //生成临时文件的文件名
+	//string tmpFilePath;                   //生成临时文件的路径
+	//int adressLenth = strlen(fileAdress);
+	//int k = adressLenth;
+	//while (k > 0 && fileAdress[k] != '\\')
+	//	k--;
+	//if (k == 0)
+	//	cout << "**输入地址无效" << endl;
+	//else
+	//{
+	//	string tmp = fileAdress;
+	//	tmpFileName = &tmp[k + 1];
+	//	tmpFilePath = tmp.substr(0, k + 1);
+	//	cout << tmpFilePath << endl;
+	//	int i = tmpFileName.length();
+	//	while (i > 0 && tmpFileName[i] != '.')
+	//		i--;
+	//	tmpFileName = tmpFileName.substr(0, i);
+	//	tmpFileName = tmpFileName + "." + to_string(num) + "tmp";
+	//}
+	//cout << tmpFileName << endl;
+	//string tmpfile = tmpFilePath + tmpFileName;
+	//cout << tmpfile << endl;
 	/*下载该临时文件*/
+
 	CURL *sub_curl = curl_easy_init();
 	if (sub_curl)
 	{
+		
 		curl_slist *headers = NULL;
 		CURLcode res;
 		FILE *sub_fp = fopen(tmpfile.c_str(), "wb");
 		string requrRange = "Range: bytes=" + to_string(startpoint) + "-" + to_string(endpoint);
-		cout << "requrRange:  " << requrRange << endl;
+		//cout << "requrRange:  " << requrRange << endl;
+		//cout << "size::" << endpoint - startpoint << endl;
+		
 		headers = curl_slist_append(headers, requrRange.c_str());
 		curl_easy_setopt(sub_curl, CURLOPT_HTTPHEADER, headers);
 		curl_easy_setopt(sub_curl, CURLOPT_URL, urlAddress);
@@ -267,19 +326,23 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, int num)
 		curl_easy_setopt(sub_curl, CURLOPT_NOBODY, 1L);*/
 		curl_easy_setopt(sub_curl, CURLOPT_WRITEFUNCTION, write_data);
 		curl_easy_setopt(sub_curl, CURLOPT_WRITEDATA, sub_fp);
+		curl_easy_setopt(sub_curl, CURLOPT_NOSIGNAL, 1L);
+		//curl_easy_setopt(sub_curl, CURLOPT_VERBOSE, 1L);
 
-		mut.lock();
+		//mut.lock();
 		res = curl_easy_perform(sub_curl);
-		mut.unlock();
+		//mut.unlock();
 
 		if (res)
 		{
-			cout << "**线程写文件失败" << num << endl;
+			cout << "**线程" << num << "写文件失败" << endl;
 		}
 		else
 		{
+			mut.lock();
 			downloadSuccess[num] = true;
-			cout << "**线程写文件成功" << num << endl;
+			mut.unlock();
+			cout << "**线程" << num << "写文件成功" << endl;
 		}
 		curl_easy_cleanup(sub_curl);
 		fclose(sub_fp);
@@ -309,4 +372,46 @@ void HttpDownloader::startDownloader()
 		singleDown();
 	else;
 		//multiDown();
+}
+
+bool HttpDownloader::mergeTempFile()
+{
+	//FILE *mergefile = fopen(fileAdress, "ab+");
+	char *buffer[threadNum];
+	long fileLengh[threadNum];
+	for (int i = 0; i < threadNum; i++)
+	{
+		FILE *sub_file = fopen(tmpfileToMerge[i].c_str(), "rb");
+		if (sub_file == NULL)
+		{
+			cout << "**打开临时文件" << i << "失败" << endl;
+			return false;
+		}
+		fseek(sub_file, 0, SEEK_END);
+		fileLengh[i] = ftell(sub_file);
+		cout << "长度：" << fileLengh[i] << endl;
+		rewind(sub_file);                 //回退！！！！！！
+		buffer[i] = new char[fileLengh[i]];
+		fread(buffer[i], fileLengh[i], 1, sub_file);
+		fclose(sub_file);
+		//cout << "这是buffer->:" << buffer[i] << endl;
+	}
+	FILE *mergefile = fopen(fileAdress, "wb");
+	for (int k = 0; k < threadNum; k++)
+	{
+		//cout << fileLengh[k] << endl;
+		if (fwrite(buffer[k], fileLengh[k], 1, mergefile) == 1)
+			continue;
+		else
+		{
+			cout << "**合并临时文件" << k << "出错";
+			return false;
+		}
+	}
+	fclose(mergefile);
+	for (int j = 0; j < threadNum; j++)
+		delete[]buffer[j];
+
+	return true;
+	//delete[]buffer;
 }
