@@ -13,7 +13,7 @@ int main()
 {
 	clock_t starttime = clock();
 
-	HttpDownloader downloader("http://mirrors.163.com/debian/ls-lR.gz","D:\\Download\\testDownloader.gz");
+	HttpDownloader downloader("http://selenium-release.storage.googleapis.com/3.0-beta2/selenium-server-standalone-3.0.0-beta2.jar","D:\\Download\\testDownloader.jar");
 	if (downloader.getResumable())   //分段下载
 	{
 		start_end *tmp;
@@ -37,7 +37,7 @@ int main()
 	}
 	else
 		downloader.singleDown();
-
+	//downloader.singleDown();
 	clock_t endtime = clock();
 	cout << "TIME:::::" << endtime - starttime << endl;
 	//Sleep(1000);
