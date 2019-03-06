@@ -42,7 +42,8 @@ private:
 	const char* fileAdress;              //保存文件位置
 	long int minSize = 1024;             //分线程的最小大小
 	long fileSize;      //下载文件的大小
-	double localFileSize;     //已下载到本地的文件大小
 
 };
+
+string mygetFileSize(double fileSize);   //将文件大小转换成string型，并带单位s
 
