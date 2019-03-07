@@ -24,7 +24,7 @@ public:
 	void cleanTempFile();            //清理临时文件
 	bool mergeTempFile();           //合并临时文件
 	void newDownladThread(long startpoint, long endpoint, string tmpfile, int num);    //开启新的下载线程
-	string creatTmpFile(long startpoint, long endpoint, int num);      //生成临时文件路径
+	string creatTmpFile(int num);      //生成临时文件路径
 	void getFileName(char* fileName);          //获取所下载文件的名称/*未实现获取文件名*/
 	void singleDown();          //单线程下载
 	start_end* getStartEnd();             //多线程下载
