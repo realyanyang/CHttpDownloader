@@ -7,22 +7,20 @@
 #include <thread>
 
 
-//bool downloadSuccess[threadNum] = { 0 };
-
 int main()
 {
-	clock_t starttime = clock();
-
-	HttpDownloader downloader("http://selenium-release.storage.googleapis.com/3.0-beta2/selenium-server-standalone-3.0.0-beta2.jar","D:\\Download\\testDownloader.jar");
+	clock_t starttime = clock();         //放在类的初始化里出问题？？？
+	curl_global_init(CURL_GLOBAL_ALL);
+	HttpDownloader downloader("http://selenium-release.storage.googleapis.com/2.39/selenium-server-2.39.0.zip","D:\\Download\\testDownloader.zip");
 	if (downloader.getResumable())   //分段下载
 	{
 		start_end *tmp;
 		tmp = downloader.getStartEnd();
 		for (int i = 0; i < threadNum; i++)
 		{
-			/*cout << i << "start::" << (tmp + i)->startPoint << endl;
-			cout << i << "end::" << (tmp + i)->endPonint << endl;*/
-			string tmpfile = downloader.creatTmpFile((tmp + i)->startPoint, (tmp + i)->endPonint, i);
+			//cout << i << "start::" << (tmp + i)->startPoint << endl;
+			//cout << i << "end::" << (tmp + i)->endPonint << endl;
+			string tmpfile = downloader.creatTmpFile(i);
 			thread anThread(&HttpDownloader::newDownladThread, downloader, (tmp + i)->startPoint, (tmp + i)->endPonint, tmpfile, i);
 			anThread.detach();
 		}
@@ -41,5 +39,6 @@ int main()
 	clock_t endtime = clock();
 	cout << "TIME:::::" << endtime - starttime << endl;
 	//Sleep(1000);
+	curl_global_cleanup();
 	return 0;
 }
