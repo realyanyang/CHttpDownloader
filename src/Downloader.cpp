@@ -175,38 +175,46 @@ size_t write_data(char *buffer, size_t size, size_t nmemb, void* stream)
 double preFileSize = 0;
 const int barlen = 70;
 clock_t preTime = 0;
-string bar(barlen, ' ');        //进度条显示
+string bar(barlen, '.');        //进度条显示
 string block(120, ' ');         //用于清屏一行
 string lastSpeed;
 double lastPercent;
 /*****************/
 /*****************/   //全局变量 由多线程使用
 string multi_lastSpeed;
-
 double multi_lastPercent; 
 double multi_localFileSize[threadNum];     //已下载到本地的文件大小
-double multi_totalLocalFileSize;       //已下载到本地的文件大小
+double multi_totalLocalFileSize = 0;     //已下载到本地的文件大小
 double multi_increaseLocalFileSize[threadNum];     //下载到本地的文件大小的增加量 用于计算速度
 double multi_preFileSize[threadNum];
 //clock_t multi_preTime[threadNum];
 clock_t multi_preTime[threadNum];
 start_end multi_piece[threadNum];      //记录每一段的起始字节和截止字节
 double pieceLen[threadNum];      //每一段的长度
-size_t pieceStart[threadNum];     //每一段起始的位置
+long pieceStart[threadNum];     //每一段起始的位置
+//static int labelnum = 0;
+//string label = "|/-\\";
 /*****************/
 void mygetPieceLen()
 {
+	long tmp;
 	for (int i = 0; i < threadNum; i++)
 	{
-		long tmp = multi_piece[i].endPonint - multi_piece[i].startPoint;
-		pieceLen[i] = (tmp / helpFileSize)*barlen;
+		tmp = multi_piece[i].endPonint - multi_piece[i].startPoint;
+		//cout << "tmp::::::::::::::::::::::::::::::::" << multi_piece[i].startPoint<< endl;
+		pieceLen[i] = (tmp*barlen) / helpFileSize;
+		//cout << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" << pieceLen[i] << endl;
 	}
 }
 void mygetPieceStart()
 {
+	long tmp;
 	for (int i = 0; i < threadNum; i++)
 	{
-		pieceStart[i] = (multi_piece[i].startPoint / helpFileSize)*barlen;
+		tmp = (multi_piece[i].startPoint / 10000)*barlen;
+		//cout << "cheng" << tmp << endl;
+		pieceStart[i] = tmp / (helpFileSize / 10000);
+		cout << "star" << pieceStart[i] << endl;
 	}
 }
 int single_progressCallback(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
@@ -290,69 +298,101 @@ void HttpDownloader::singleDown()
 
 int multi_progressCallback(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
 {
-	int num = *(int*)clientp;        //num为对应的进程号
-	long double speed;
-	string strSpeed;
-	double dByte;
-	double rate;
-	clock_t nowTime = clock();
-	double percent;
+	/*for (int i = 0; i < threadNum; i++)
+	{
+		mut1.lock();
+		cout << "len" << i << ":" <<pieceStart[i] << endl;
+		mut1.unlock();
+	}*/
+	//static int num = *(int*)clientp;        //num为对应的进程号
+	//long double speed;
+	//string strSpeed;
+	//double dByte = 0;;
+	//double rate;
+	//clock_t nowTime = clock();
+	//double percent;
 
+	////mut1.lock();
+
+	//long double dTime = (long double)(nowTime - multi_preTime[num]) / CLOCKS_PER_SEC; //单位为秒s
+	//int flag = 0;     //标识
+	//if (dlnow != multi_preFileSize[num] && dltotal != 0)    //刷新每一个进程段的进度
+	//{
+	//	mut1.lock();
+	//	multi_localFileSize[num] = dlnow;
+	//	mut1.unlock();
+	//	rate = dlnow / dltotal;
+	//	mut1.lock();
+	//	bar.replace(pieceStart[num],
+	//		rate * pieceLen[num], rate * pieceLen[num], '#');
+	//	mut1.unlock();
+	//	double sumFileSize = 0;
+	//	for (int i = 0; i < threadNum; i++)
+	//	{
+	//		sumFileSize = sumFileSize + multi_localFileSize[i];
+	//	}
+	//	mut1.lock();
+	//	multi_totalLocalFileSize = sumFileSize;
+	//	mut1.unlock();
+	//	/*multi_totalLocalFileSize = accumulate(multi_localFileSize,
+	//		multi_localFileSize + threadNum, 0);*/
+	//	percent = (multi_totalLocalFileSize / helpFileSize) * 100;
+	//	//multi_preTotalLocalFileSize = multi_totalLocalFileSize;
+	//	mut1.lock();
+	//	multi_lastPercent = percent;
+	//	mut1.unlock();
+	//}
+	//else
+	//{
+	//	percent = multi_lastPercent;
+	//	flag++;
+	//}
+	//if (dTime >= 0.5)                //刷新速度
+	//{
+	//	mut1.lock();
+	//	multi_increaseLocalFileSize[num] = dlnow - multi_preFileSize[num];
+	//	mut1.unlock();
+	//	double sumdByte = 0;
+	//	for (int k = 0; k < threadNum; k++)
+	//	{
+	//		sumdByte = sumdByte + multi_increaseLocalFileSize[k];
+	//	}
+	//	dByte = sumdByte;
+	//	/*dByte = accumulate(multi_increaseLocalFileSize,
+	//		multi_increaseLocalFileSize + threadNum, 0);*/
+
+	//	speed = dByte / dTime;
+	//	strSpeed = mygetDownloadSpeed(speed);
+	//	mut1.lock();
+	//	multi_lastSpeed = strSpeed;
+	//	mut1.unlock();
+	//	mut1.lock();
+	//	multi_preTime[num] = nowTime;
+	//	mut1.unlock();
+	//	mut1.lock();
+	//	multi_preFileSize[num] = dlnow;
+	//	mut1.unlock();
+	//	
+	//}
+	//else
+	//{
+	//	strSpeed = multi_lastSpeed;
+	//	flag++;
+	//}
+
+	//if (flag == 2)
+	//	return 0;
 	//mut1.lock();
-
-	long double dTime = (long double)(nowTime - multi_preTime[num]) / CLOCKS_PER_SEC; //单位为秒s
-	int flag = 0;     //标识
-	if (dlnow != multi_preFileSize[num] && dltotal != 0)    //刷新每一个进程段的进度
-	{
-		multi_localFileSize[num] = dlnow;
-		//double pieceLen = (dltotal / (double)helpFileSize)*(double)barlen;  //每一段的长度
-		rate = dlnow / dltotal;
-		//lastPercent = percent;
-		bar.replace(pieceStart[num],
-			pieceStart[num] + rate * pieceLen[num], rate*pieceLen[num], '#');
-		multi_totalLocalFileSize = accumulate(multi_localFileSize,
-			multi_localFileSize + threadNum, 0);
-		percent = (multi_totalLocalFileSize / helpFileSize) * 100;
-		//multi_preTotalLocalFileSize = multi_totalLocalFileSize;
-		multi_lastPercent = percent;
-	}
-	else
-	{
-		//percent = lastPercent;
-		percent = multi_lastPercent;
-		flag++;
-	}
-	if (dTime >= 0.5)                //刷新速度
-	{
-		multi_increaseLocalFileSize[num] = dlnow - multi_preFileSize[num];
-		dByte = accumulate(multi_increaseLocalFileSize,
-			multi_increaseLocalFileSize + threadNum, 0);
-
-		//dByte = dlnow - preFileSize;
-		speed = dByte / dTime;
-		strSpeed = mygetDownloadSpeed(speed);
-
-		multi_lastSpeed = strSpeed;
-		//lastSpeed = strSpeed;
-		//preTime = nowTime;
-		//preFileSize = dlnow;
-		multi_preTime[num] = nowTime;
-		multi_preFileSize[num] = dlnow;
-	}
-	else
-	{
-		strSpeed = multi_lastSpeed;
-		flag++;
-	}
-
-	if (flag == 2)
-		return 0;
-	
-	string strDlownNow = mygetFileSize(multi_totalLocalFileSize);
-
-	printf("%s\r", block.c_str());
-	printf("[%s][%.2f%%][%s][%s/%s]\r", bar.c_str(), percent, strSpeed.c_str(), strDlownNow.c_str(), strFileSize.c_str());
-	//记录下本次回调参数
+	//string strDlownNow = mygetFileSize(multi_totalLocalFileSize);
+	//mut1.unlock();
+	//mut1.lock();
+	//printf("%s\r", block.c_str());
+	//printf("[%s][%.2f%%][%s][%s/%s]\r", bar.c_str(), percent, strSpeed.c_str(), strDlownNow.c_str(), strFileSize.c_str());
+	//mut1.unlock();
+	//////记录下本次回调参数
+	//mut1.lock();
+	//labelnum = (labelnum + 1) % 4;
+	//printf("[%c]\r", label[labelnum]);
 	//mut1.unlock();
 	return 0;
 }
@@ -360,7 +400,7 @@ int multi_progressCallback(void *clientp, double dltotal, double dlnow, double u
 
 start_end* HttpDownloader::getStartEnd()
 {
-	start_end st_en[threadNum];
+	static start_end st_en[threadNum];
 	long eachFileSize = fileSize / threadNum;
 	//cout << "eachfilezie:::::::::::" << eachFileSize << endl;
 	for (int i = 0; i < threadNum; i++)
@@ -373,6 +413,7 @@ start_end* HttpDownloader::getStartEnd()
 	{
 		st_en[j].endPonint = st_en[j + 1].startPoint - 1;
 		multi_piece[j].endPonint = st_en[j + 1].startPoint - 1;
+		//cout << multi_piece[j].endPonint << endl;
 	}
 	st_en[threadNum - 1].endPonint = fileSize - 1;
 	multi_piece[threadNum - 1].endPonint = fileSize - 1;
@@ -381,11 +422,13 @@ start_end* HttpDownloader::getStartEnd()
 		cout << st_en[k].startPoint << endl;
 	}*/
 
+	mygetPieceLen();                    //获取每段的长度，为进度条做准备
+	mygetPieceStart();                //获取每段起始位置，为进度条做准备
 	return st_en;
 
 }
 
-string HttpDownloader::creatTmpFile(long startpoint, long endpoint, int num)
+string HttpDownloader::creatTmpFile(int num)
 {
 	/*创建临时文件*/
 	string tmpFileName;                 //生成临时文件的文件名
@@ -419,8 +462,7 @@ string HttpDownloader::creatTmpFile(long startpoint, long endpoint, int num)
 void HttpDownloader::newDownladThread(long startpoint, long endpoint, string tmpfile, int num)
 {
 	/*下载该临时文件*/
-	mygetPieceLen();                    //获取每段的长度，为进度条做准备
-	mygetPieceStart();                //获取每段起始位置，为进度条做准备
+
 	CURL *sub_curl = curl_easy_init();
 	if (sub_curl)
 	{
@@ -455,10 +497,11 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, string tmp
 		}
 		else
 		{
-			mut.lock();
+			//mut.lock();
 			downloadSuccess[num] = true;
-			mut.unlock();
+			//mut.unlock();
 			cout << "**线程" << num << "写文件成功" << endl;
+			
 		}
 		curl_easy_cleanup(sub_curl);
 		fclose(sub_fp);
