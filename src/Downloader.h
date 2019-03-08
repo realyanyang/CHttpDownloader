@@ -46,4 +46,3 @@ private:
 };
 
 string mygetFileSize(double fileSize);   //将文件大小转换成string型，并带单位s
-
