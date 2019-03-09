@@ -4,3 +4,4 @@
 ![image](https://github.com/YanYangB/CHttpDownloader/blob/master/image/single.gif)
 ##多线程下载时：
 
+![image](https://github.com/YanYangB/CHttpDownloader/blob/master/image/multi.gif)
