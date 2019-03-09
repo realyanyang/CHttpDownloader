@@ -15,6 +15,7 @@
 #include <mutex>
 #include <Windows.h>
 #include <numeric>
+#include <cstdio>
 bool downloadSuccess[threadNum] = { 0 };
 mutex mut;               //线程锁
 //mutex mut1;
@@ -27,6 +28,7 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 	//curl_global_init(CURL_GLOBAL_ALL);
 	urlAddress = url;
 	fileAdress = file;
+	downloadAdressable = false;
 	curl = curl_easy_init();
 	if (curl)
 	{
@@ -35,7 +37,7 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 		CURLcode res;
 		headers = curl_slist_append(headers, "Range: bytes=0-");
 		curl_easy_setopt(curl, CURLOPT_URL, urlAddress);
-		curl_easy_setopt(curl, CURLOPT_HEADER, 1L);
+		curl_easy_setopt(curl, CURLOPT_HEADER, 0L);
 		curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);// 改协议头
 		int i = 0;
@@ -53,7 +55,6 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 		}
 		if (i == 3)
 		{
-			cout << "**无法连接到服务器" << endl;
 			connectAble = false;
 		}
 		else
@@ -68,14 +69,12 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 		if (response_code == 206 || fileSize != NULL || fileSize != 0)
 		{
 			resumable = true;
-			cout << "**支持断点续传" << endl;
 			strFileSize = mygetFileSize(fileSize);
 			helpFileSize = fileSize;
 		}
 		else
 		{
 			resumable = false;
-			cout << "**不支持断点续传" << endl;
 		}
 	}
 	else
@@ -84,12 +83,32 @@ HttpDownloader::HttpDownloader(const char url[], const char file[])
 		cout << "**初始化失败" << endl;
 
 	}
+	/*判断输入下载路径是否合法*/
+	FILE *testfp = fopen(file, "w");
+	if (testfp == NULL)
+	{
+		downloadAdressable = false;
+		cout << "**下载路径非法" << endl;
+	}
+	else
+	{
+		downloadAdressable = true;
+		fclose(testfp);
+	}
 }
 HttpDownloader::~HttpDownloader()
 {
-	//curl_global_cleanup();
 }
 
+bool HttpDownloader::getConnectable()
+{
+	return connectAble;
+}
+
+bool HttpDownloader::getAdressable()
+{
+	return downloadAdressable;
+}
 string mygetFileSize(double fileSize)
 {
 	double tmp;
@@ -176,7 +195,7 @@ double preFileSize = 0;
 const int barlen = 70;
 clock_t preTime = 0;
 string bar(barlen, '.');        //进度条显示
-string block(120, ' ');         //用于清屏一行
+string block(110, ' ');         //用于清屏一行
 string lastSpeed;
 double lastPercent;
 /*****************/
@@ -190,31 +209,26 @@ volatile double multi_preFileSize[threadNum];
 //clock_t multi_preTime[threadNum];
 volatile clock_t multi_preTime[threadNum];
 volatile start_end multi_piece[threadNum];      //记录每一段的起始字节和截止字节
-volatile double pieceLen[threadNum];      //每一段的长度
-volatile long pieceStart[threadNum];     //每一段起始的位置
+volatile int pieceLen[threadNum];      //每一段的长度
+volatile int pieceStart[threadNum];     //每一段起始的位置
 //static int labelnum = 0;
 //string label = "|/-\\";
 /*****************/
 void mygetPieceLen()
 {
-	long tmp;
-	for (int i = 0; i < threadNum; i++)
+	for (int i = 0; i < threadNum - 1; i++)
 	{
-		tmp = multi_piece[i].endPonint - multi_piece[i].startPoint;
-		//cout << "tmp::::::::::::::::::::::::::::::::" << multi_piece[i].startPoint<< endl;
-		pieceLen[i] = (tmp*barlen) / helpFileSize;
-		//cout << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" << pieceLen[i] << endl;
+		pieceLen[i] = pieceStart[i + 1] - pieceStart[i];
 	}
+	pieceLen[threadNum - 1] = barlen - pieceStart[threadNum - 1];
 }
 void mygetPieceStart()
 {
-	long tmp;
+	int tmp;
 	for (int i = 0; i < threadNum; i++)
 	{
 		tmp = (multi_piece[i].startPoint / 10000)*barlen;
-		//cout << "cheng" << tmp << endl;
 		pieceStart[i] = tmp / (helpFileSize / 10000);
-		//cout << "star" << pieceStart[i] << endl;
 	}
 }
 int single_progressCallback(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
@@ -279,7 +293,6 @@ void HttpDownloader::singleDown()
 
 	//curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeOut);  //不要设置超时时间
 	res = curl_easy_perform(curl);
-	cout << res << endl;
 	if (!res)
 	{
 		long double downloadSzie;
@@ -287,8 +300,6 @@ void HttpDownloader::singleDown()
 		//cout << "here" << endl;
 		curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD, &downloadSzie);
 		curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD, &speed);
-		cout << "downloaded size:" << downloadSzie << endl;
-		cout << "average speed: " << speed << "bytes/sec" << " 100.00%" << endl;
 	}
 	curl_easy_cleanup(curl);
 	fclose(fp);
@@ -298,12 +309,6 @@ void HttpDownloader::singleDown()
 
 int multi_progressCallback(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
 {
-	/*for (int i = 0; i < threadNum; i++)
-	{
-		mut1.lock();
-		cout << "len" << i << ":" <<pieceStart[i] << endl;
-		mut1.unlock();
-	}*/
 	int num = *(int*)clientp;        //num为对应的进程号
 	//cout << num << endl;
 		
@@ -393,10 +398,6 @@ int multi_progressCallback(void *clientp, double dltotal, double dlnow, double u
 	printf("%s\r", block.c_str());
 	printf("[%s][%.2f%%][%s][%s/%s]\r", bar.c_str(), percent, strSpeed.c_str(), strDlownNow.c_str(), strFileSize.c_str());
 
-	
-	//mut1.unlock();
-	//////记录下本次回调参数
-	//mut1.lock();
 	//labelnum = (labelnum + 1) % 4;
 	//printf("[%c]\r", label[labelnum]);
 	//mut1.unlock();
@@ -428,8 +429,9 @@ start_end* HttpDownloader::getStartEnd()
 		cout << st_en[k].startPoint << endl;
 	}*/
 
+	
+	mygetPieceStart();                //获取每段起始位置，为进度条做准备  两者位置不能互换
 	mygetPieceLen();                    //获取每段的长度，为进度条做准备
-	mygetPieceStart();                //获取每段起始位置，为进度条做准备
 	return st_en;
 
 }
@@ -500,6 +502,7 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, string tmp
 
 		if (res)
 		{
+			cout << endl;
 			cout << "**线程" << num << "写文件失败" << endl;
 		}
 		else
@@ -508,7 +511,6 @@ void HttpDownloader::newDownladThread(long startpoint, long endpoint, string tmp
 			downloadSuccess[num] = true;
 			mut.unlock();
 			//cout << "**线程" << num << "写文件成功" << endl;
-			
 		}
 		curl_easy_cleanup(sub_curl);
 		fclose(sub_fp);
@@ -532,13 +534,13 @@ bool HttpDownloader::threadMonitor()
 		return false;
 }
 
-void HttpDownloader::startDownloader()
-{
-	if (!resumable)
-		singleDown();
-	else;
-		//multiDown();
-}
+//void HttpDownloader::startDownloader()
+//{
+//	if (!resumable)
+//		singleDown();
+//	else;
+//		//multiDown();
+//}
 
 bool HttpDownloader::mergeTempFile()
 {
@@ -550,6 +552,7 @@ bool HttpDownloader::mergeTempFile()
 		FILE *sub_file = fopen(tmpfileToMerge[i].c_str(), "rb");
 		if (sub_file == NULL)
 		{
+			cout << endl;
 			cout << "**打开临时文件" << i << "失败" << endl;
 			return false;
 		}
@@ -570,6 +573,7 @@ bool HttpDownloader::mergeTempFile()
 			continue;
 		else
 		{
+			cout << endl;
 			cout << "**合并临时文件" << k << "出错";
 			return false;
 		}
@@ -579,4 +583,15 @@ bool HttpDownloader::mergeTempFile()
 		delete[]buffer[j];
 
 	return true;
+}
+
+void HttpDownloader::cleanTempFile()    //清理临时文件
+{
+	for (int i = 0; i < threadNum; i++)
+	{
+		if (remove(tmpfileToMerge[i].c_str()) == 0)
+			continue;
+		else
+			cout << "**清理临时文件" << i << "失败" << endl;
+	}
 }
