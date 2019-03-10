@@ -9,5 +9,5 @@
 多线程用时23s  
 
 ### 下载器使用  
-在dos下运行exe，传入下载链接以及本地路径，如图所示：  
+* 在dos下运行exe，传入下载链接以及本地路径，如图所示：  
 ![image](https://github.com/YanYangB/CHttpDownloader/blob/master/image/download1.png)
